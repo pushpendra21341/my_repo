@@ -1,0 +1,45 @@
+_schema-version: 3.3.0
+ID: c_cpe_template
+version: 1.0.0
+description: "Course Template"
+parameters:
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx cds build --production
+modules:
+  - name: c_cpe_template-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      instances: 1
+      buildpack: nodejs_buildpack
+      app-name: ${space}-c_cpe_submission-srv
+      routes:
+        - route: ${org}-cpe-submission.${default-domain}
+    build-parameters:
+      builder: npm-ci
+    provides:
+      - name: srv-api # required by consumers of CAP services (e.g. approuter)
+        properties:
+          srv-url: ${default-url}
+    requires:
+      - name: c_cpe_template-db
+
+  - name: c_cpe_template-db-deployer
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: c_cpe_template-db
+
+resources:
+  - name: c_cpe_template-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
